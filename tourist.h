@@ -22,7 +22,9 @@ struct Tourist {
     bool isLeader;
     bool inTrip;
     int acks;
+    int acksGuide;
     int tripCounter;
+    int startTripAcks;
     int receivedReleaseGroup;
     int hospitalCounter;
 
@@ -107,10 +109,8 @@ struct Tourist {
         groupMembers = priority_queue<Message>();
         tripQueue = removeTouristFromQueue(tripQueue, pid);
         group = -1;
-        inTrip = false;
-        inTripQueue = false;
+        
         tripCounter = 0;
-        receivedReleaseGroup = 1;
 
 
         if (isLeader) {
