@@ -31,7 +31,7 @@ void imitateTourist(Tourist &tourist) {
     {
         if (!tourist.inTripQueue && !tourist.sendRequest && tourist.receivedReleaseGroup == groupSize) {
             tourist.joinTripQueue(touristsNumber);
-        } else {
+        } else{
             // Odebranie wiadomosci i ustawienie aktualnych timestampow
 
             int flag;
@@ -57,12 +57,12 @@ void imitateTourist(Tourist &tourist) {
                     tourist.timestamp++;
                     sendMessage(msg.touristId, ACK_GUIDE, tourist.timestamp, tourist.pid);
                     tourist.guideQueue.push(msg);
-                    // JESLI PROCES JESZCZE NIE MA GRUPY TO POWINIEN JA "UFORMOWAC", 
-                    // BO O PRZEWODNIKA MOZE UBIEGAC SIE PROCES Z JEGO GRUPY
-                    if (tourist.group == -1 && !tourist.isLeader && !tourist.inTrip) {
-                        // cout << "Forming group " << tourist.pid << endl;
-                        tourist.formGroup();
-                    }
+                    // // JESLI PROCES JESZCZE NIE MA GRUPY TO POWINIEN JA "UFORMOWAC", 
+                    // // BO O PRZEWODNIKA MOZE UBIEGAC SIE PROCES Z JEGO GRUPY
+                    // if (tourist.group == -1 && !tourist.isLeader && !tourist.inTrip) {
+                    //     // cout << "Forming group " << tourist.pid << endl;
+                    //     tourist.formGroup();
+                    // }
                     // cout << msg.touristId << " rezerwuje przewodnika" << endl;
                     // cout << "Guide queue: ";
                     // printQueue(tourist.guideQueue, tourist.pid);
@@ -80,100 +80,81 @@ void imitateTourist(Tourist &tourist) {
 
                         int position = tourist.findTouristIndexInTripQueue(tourist.pid);
                         // cout << "Tourist " << tourist.pid << " is " << position << " in queue" << endl;
-                        if ((position + 1)% groupSize == 0) {
+                        if ((position + 1)% groupSize == 0 && position != -1 && !tourist.isThereLowerTimestamp(tourist.requestTripTimestamp())) {
                             // cout << tourist.pid <<": I'm the leader of the group " << tourist.group << ": ";
-
-                            tourist.formGroup();
-                            tourist.broadcastMessageInGroup(REQ_START_TRIP);
+                            tourist.isLeader = true;
+                            tourist.joinGuideQueue(touristsNumber);
                         }
                     }
                     break;
                 case ACK_GUIDE:
                     // PROCES DOSTAJE POTWIERDZENIE ZE MOZE UBIEGAC SIE O PRZEWODNIKA
-                    if (tourist.acksGuide < touristsNumber - 1) {
-                        tourist.acksGuide++;
+                    if (tourist.guideAcks < touristsNumber - 1) {
+                        tourist.guideAcks++;
                         
                     } else {
                         tourist.inGuideQueue = true;
                         tourist.sendRequest = false;
-                        tourist.acksGuide = 1;
+                        tourist.guideAcks = 1;
                         // printQueue(tourist.guideQueue);
 
                         int position = tourist.findTouristIndexInGuideQueue();
+                        // MOGL STWORZYC GRUPE JESLI PRZED WSZYSTKIMI ACK JAKIS INNY PROCES UBIEGAL SIE O PRZEWODNIKA
+                        // if (tourist.group == -1) {
+                        //     tourist.formGroup();
+                        // }
 
+                    
                         // printQueue(tourist.groupMembers);
-                        if (position < numberOfGuides) {
-                            // MOGL STWORZYC GRUPE JESLI PRZED WSZYSTKIMI ACK JAKIS INNY PROCES UBIEGAL SIE O PRZEWODNIKA
-                            if (tourist.group == -1) {
-                                tourist.formGroup();
-                            }
+                        if (position < numberOfGuides && position != -1 && !tourist.isThereLowerTimestamp(tourist.requestGuideTimestamp())) {
+                            tourist.formGroup();
                             // cout << tourist.pid << " reserved the guide. Starting trip " << position << endl;
                             // cout << "Guide queue: ";
                             // printQueue(tourist.guideQueue, tourist.pid);
                             // cout << "Trip queue: ";
                             // printQueue(tourist.tripQueue, tourist.pid);
                             // PRZEWODNICY SA DOSTEPNI WIEC MOZNA WYSTARTOWAC WYCIECZKE
-                            printQueue(tourist.groupMembers, tourist.pid);
                             tourist.startTrip();
                         }
 
                     }
                     break;
-                case REQ_START_TRIP:
-                    // PROCES DOSTAJE WIADOMOSC ZE WYCIECZKA SIE ROZPOCZELA
-                    if (tourist.inTrip || tourist.group != -1) {
-                        sendMessage(msg.touristId, NACK_START_TRIP, tourist.timestamp, tourist.pid);
-                    } else {
-                        sendMessage(msg.touristId, ACK_START_TRIP, tourist.timestamp, tourist.pid);
-                    }
-                    // tourist.inTrip = true;
-                    // tourist.groupMembers = priority_queue<Message>();
-                    // tourist.formGroup();
-                    // cout << "Tourist " << tourist.pid << " started the trip" << endl;
-                    break;
-                case NACK_START_TRIP:
-                    // PROCES DOSTAJE WIADOMOSC ZE INNY PROCES ODMOWIL STARTU
-                    tourist.isLeader = false;
-                    tourist.groupMembers = priority_queue<Message>();
-                    tourist.group = -1;
-                    break;
-                case ACK_START_TRIP:
-                    // PROCES DOSTAJE WIADOMOSC ZE INNY AKCEPTUJE START
-                    tourist.startTripAcks++;
-                    if (tourist.startTripAcks == groupSize) {
-                        tourist.inTrip = true;
-                        tourist.isLeader = true;
-                        tourist.startTripAcks = 1;
-                        tourist.joinGuideQueue(touristsNumber);
-                    }
-                    break;
                 case START_TRIP:
-                    // PROCES DOSTAJE WIADOMOSC ZE INNY PROCES ZACZYNA WYCIECZKE
+                    // PROCES DOSTAJE WIADOMOSC ZE WYCIECZKA SIE ROZPOCZELA
                     tourist.formGroup();
                     tourist.inTrip = true;
+                    // cout << "Tourist " << tourist.pid << " started the trip" << endl;
                     break;
                 case RELEASE_GROUP:
                     // PROCES DOSTAJE WIADOMOSC ZE INNY PROCES Z JEGO GRUPY KONCZY WYCIECZKE
                     tourist.receivedReleaseGroup++;
-                    if (tourist.receivedReleaseGroup == groupSize) {
+                    
+                    if (tourist.isLeader && tourist.receivedReleaseGroup == groupSize) {
+                       tourist.broadcastMessage(RELEASE_GUIDE);
+                       tourist.isLeader = false;
+                       tourist.guideQueue = tourist.removeTouristFromQueue(tourist.guideQueue, tourist.pid);
+                       tourist.inGuideQueue = false;
+                    } else if (tourist.receivedReleaseGroup == groupSize) {
+                        tourist.group = -1;
                         tourist.inTrip = false;
                         tourist.inTripQueue = false;
-                    }
+                        tourist.tripCounter = 0;
+                    }     
                     break;
                 case RELEASE_TRIP:
                     // PROCES DOSTAJE WIADOMOSC ZE INNY PROCES KONCZY WYCIECZKE
                     tourist.tripQueue = tourist.removeTouristFromQueue(tourist.tripQueue, msg.touristId);
                     // NUMER GRUPY MOGL ULEC ZMIANIE BO KOLEJKA IS PRZESUWA
-                    if (tourist.group != -1) {
-                        tourist.updateGroupNumber();
-                    }
+                    // if (tourist.group != -1) {
+                    //     tourist.updateGroupNumber();
+                    // }
                     break;
                 case RELEASE_GUIDE:
                     // PROCES DOSTAJE WIADOMOSC ZE INNY PROCES ZWALNIA PRZEWODNIKA
                     tourist.guideQueue = tourist.removeTouristFromQueue(tourist.guideQueue, msg.touristId);
                     if (tourist.isLeader) {
                         int position = tourist.findTouristIndexInGuideQueue();
-                        if (position < numberOfGuides) {
+                        if (position < numberOfGuides && position != -1 && !tourist.isThereLowerTimestamp(tourist.requestGuideTimestamp())) {
                             // cout << tourist.pid << " reserved the guide. Starting trip" << endl;
                             // printQueue(tourist.guideQueue, tourist.pid);
                             // printQueue(tourist.tripQueue, tourist.pid);
@@ -195,17 +176,19 @@ void imitateTourist(Tourist &tourist) {
                 // cout << "Tourist " << tourist.pid << " is on the trip at " << tourist.tripCounter << endl;
                 if (tourist.tripCounter == tripTime) {
                     if (tourist.isLeader) {
+                        cout << "Group: " << tourist.group;
                         // printQueue(tourist.tripQueue, tourist.pid);
                         printQueue(tourist.groupMembers, tourist.pid);
                         // printQueue(tourist.guideQueue, tourist.pid);
                     }
+                    // printQueue(tourist.groupMembers, tourist.pid);
                     tourist.releaseGroup();
                 } else {
                     if (tourist.isTouristBeaten()) {
                         // cout << "Tourist " << tourist.pid << " is beaten" << endl;
                     }
                 }
-                
+                sleep(1);
             } else if (tourist.isBeaten)  {
                 if (tourist.inTrip) {
                     tourist.tripCounter++;
@@ -220,10 +203,12 @@ void imitateTourist(Tourist &tourist) {
                 
                 if(tourist.tripCounter == tripTime) {
                     if (tourist.isLeader) {
+                        cout << "Group: " << tourist.group << " ";
                         // printQueue(tourist.tripQueue, tourist.pid);
                         printQueue(tourist.groupMembers, tourist.pid);
                         // printQueue(tourist.guideQueue, tourist.pid);
                     }
+                    // printQueue(tourist.groupMembers, tourist.pid);
                     tourist.releaseGroup();
                 }
             }
@@ -268,8 +253,7 @@ int main(int argc, char **argv) {
         tourist.tripCounter = 0;
         tourist.receivedReleaseGroup = groupSize; // groupSize zeby poczatkowy warunek byl spelniony
         tourist.hospitalCounter = 0;
-        tourist.startTripAcks = 1;
-        tourist.acksGuide = 1;
+        tourist.guideAcks = 1;
 
         imitateTourist(tourist);
     }

@@ -3,6 +3,7 @@
 #include <queue>
 #include <map>
 #include <random>
+#include <limits.h>
 
 #include "communication.h"
 #include "constants.h"
@@ -22,9 +23,8 @@ struct Tourist {
     bool isLeader;
     bool inTrip;
     int acks;
-    int acksGuide;
+    int guideAcks;
     int tripCounter;
-    int startTripAcks;
     int receivedReleaseGroup;
     int hospitalCounter;
 
@@ -45,6 +45,39 @@ struct Tourist {
             return pid > other.pid;
         }
         return timestamp > other.timestamp;
+    }
+
+    bool isThereLowerTimestamp(int timestamp) {
+        for (auto const& x : currentTimestamps) {
+            if (x.second < timestamp) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    int requestTripTimestamp() {
+        priority_queue<Message> tempQueue = tripQueue;
+        while (!tempQueue.empty()) {
+            Message msg = tempQueue.top();
+            if (msg.touristId == pid) {
+                return msg.timestamp;
+            }
+            tempQueue.pop();
+        }
+        return INT_MAX;
+    }
+
+    int requestGuideTimestamp() {
+        priority_queue<Message> tempQueue = guideQueue;
+        while (!tempQueue.empty()) {
+            Message msg = tempQueue.top();
+            if (msg.touristId == pid) {
+                return msg.timestamp;
+            }
+            tempQueue.pop();
+        }
+        return INT_MAX;
     }
 
     void broadcastMessage(int type) {
@@ -108,17 +141,7 @@ struct Tourist {
 
         groupMembers = priority_queue<Message>();
         tripQueue = removeTouristFromQueue(tripQueue, pid);
-        group = -1;
         
-        tripCounter = 0;
-
-
-        if (isLeader) {
-            broadcastMessage(RELEASE_GUIDE);
-            isLeader = false;
-            guideQueue = removeTouristFromQueue(guideQueue, pid);
-            inGuideQueue = false;
-        }
     }
 
     int findTouristIndexInTripQueue() {
