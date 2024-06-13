@@ -159,6 +159,7 @@ void imitateTourist(Tourist &tourist) {
                             // printQueue(tourist.guideQueue, tourist.pid);
                             // printQueue(tourist.tripQueue, tourist.pid);
                             // PRZEWODNICY SA DOSTEPNI WIEC MOZNA WYSTARTOWAC WYCIECZKE
+                            tourist.formGroup();
                             tourist.startTrip();
                         }
                     }
