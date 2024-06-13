@@ -138,12 +138,9 @@ struct Tourist {
     }
 
     void releaseGroup() {
+        inTrip = false;
         broadcastMessage(RELEASE_TRIP);
         broadcastMessageInGroup(RELEASE_GROUP);
-
-        groupMembers = priority_queue<Message>();
-        tripQueue = removeTouristFromQueue(tripQueue, pid);
-        
     }
 
     int findTouristIndexInTripQueue() {

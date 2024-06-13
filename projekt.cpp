@@ -134,11 +134,15 @@ void imitateTourist(Tourist &tourist) {
                        tourist.isLeader = false;
                        tourist.guideQueue = tourist.removeTouristFromQueue(tourist.guideQueue, tourist.pid);
                        tourist.inGuideQueue = false;
+                       tourist.groupMembers = priority_queue<Message>();
+                        tourist.tripQueue = tourist.removeTouristFromQueue(tourist.tripQueue, tourist.pid);
                     } else if (tourist.receivedReleaseGroup == groupSize) {
                         tourist.group = -1;
                         tourist.inTrip = false;
                         tourist.inTripQueue = false;
                         tourist.tripCounter = 0;
+                        tourist.groupMembers = priority_queue<Message>();
+                        tourist.tripQueue = tourist.removeTouristFromQueue(tourist.tripQueue, tourist.pid);
                     }     
                     break;
                 case RELEASE_TRIP:
@@ -177,7 +181,7 @@ void imitateTourist(Tourist &tourist) {
                 // cout << "Tourist " << tourist.pid << " is on the trip at " << tourist.tripCounter << endl;
                 if (tourist.tripCounter == tripTime) {
                     if (tourist.isLeader) {
-                        cout << "Group: " << tourist.group;
+                        cout << "Group: " << tourist.group << " ";
                         // printQueue(tourist.tripQueue, tourist.pid);
                         printQueue(tourist.groupMembers, tourist.pid);
                         // printQueue(tourist.guideQueue, tourist.pid);
@@ -189,7 +193,7 @@ void imitateTourist(Tourist &tourist) {
                         // cout << "Tourist " << tourist.pid << " is beaten" << endl;
                     }
                 }
-                sleep(1);
+                // sleep(1);
             } else if (tourist.isBeaten)  {
                 if (tourist.inTrip) {
                     tourist.tripCounter++;
@@ -197,7 +201,6 @@ void imitateTourist(Tourist &tourist) {
                 tourist.hospitalCounter++;
                 
                 if(tourist.hospitalCounter == hospitalizationTime) {
-                    tourist.inHospital = false;
                     tourist.isBeaten = false;
                     tourist.hospitalCounter = 0;
                 }

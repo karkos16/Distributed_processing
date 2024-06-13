@@ -23,5 +23,5 @@ const int numberOfGuides = 2;
 const int groupSize = 7;
 const int MAX_TOURISTS = 20;
 const int tripTime = 5;
-const double probabilityOfBeaten = 0.9;
+const double probabilityOfBeaten = 0.01;
 const int hospitalizationTime = 2;
