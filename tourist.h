@@ -51,6 +51,8 @@ struct Tourist {
         for (auto const& x : currentTimestamps) {
             if (x.second < timestamp) {
                 return true;
+            } else if (x.second == timestamp && x.first < pid) {
+                return true;
             }
         }
         return false;
