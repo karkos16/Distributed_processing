@@ -187,21 +187,31 @@ struct Tourist {
 
     void formGroup() {
         int groupNumber = findTouristIndexInTripQueue() / groupSize;
-        std::priority_queue<Message> tempQueue = tripQueue; 
+        priority_queue<Message> tempQueue = tripQueue;
+        if (isLeader) {
+            int index = findTouristIndexInTripQueue();
+            while (!tempQueue.empty()) {
+                Message msg = tempQueue.top();
+                if ((index - findTouristIndexInTripQueue(msg.touristId)) < groupSize && (index - findTouristIndexInTripQueue(msg.touristId)) >= 0) {
+                    groupMembers.push(msg);
+                }
+                tempQueue.pop();
+            
+            }
+        }
+    }
+
+    void formGroup(int leaderID) {
+        int leaderIndex = findTouristIndexInTripQueue(leaderID);
+        priority_queue<Message> tempQueue = tripQueue;
         while (!tempQueue.empty()) {
-            Message msg = tempQueue.top();
-            if ((findTouristIndexInTripQueue(msg.touristId) / groupSize) == groupNumber) {
-                groupMembers.push(msg);
+                Message msg = tempQueue.top();
+                if ((leaderIndex - findTouristIndexInTripQueue(msg.touristId)) < groupSize && (leaderIndex - findTouristIndexInTripQueue(msg.touristId)) >= 0) {
+                    groupMembers.push(msg);
+                }
+                tempQueue.pop();
+            
             }
-            tempQueue.pop();
-        }
-        if (groupMembers.size() != groupSize) {
-            while (!groupMembers.empty()) {
-                groupMembers.pop();
-            }
-        } else {
-            group = groupNumber;
-        }
     }
     
     void startTrip() {

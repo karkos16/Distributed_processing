@@ -121,7 +121,7 @@ void imitateTourist(Tourist &tourist) {
                     break;
                 case START_TRIP:
                     // PROCES DOSTAJE WIADOMOSC ZE WYCIECZKA SIE ROZPOCZELA
-                    tourist.formGroup();
+                    tourist.formGroup(msg.touristId);
                     tourist.inTrip = true;
                     // cout << "Tourist " << tourist.pid << " started the trip" << endl;
                     break;
@@ -181,9 +181,8 @@ void imitateTourist(Tourist &tourist) {
                 // cout << "Tourist " << tourist.pid << " is on the trip at " << tourist.tripCounter << endl;
                 if (tourist.tripCounter == tripTime) {
                     if (tourist.isLeader) {
-                        cout << "Group: " << tourist.group << " ";
-                        // printQueue(tourist.tripQueue, tourist.pid);
-                        printQueue(tourist.groupMembers, tourist.pid);
+                        printQueue(tourist.tripQueue, tourist.pid);
+                        // printQueue(tourist.groupMembers, tourist.pid);
                         // printQueue(tourist.guideQueue, tourist.pid);
                     }
                     // printQueue(tourist.groupMembers, tourist.pid);
@@ -207,14 +206,14 @@ void imitateTourist(Tourist &tourist) {
                 
                 if(tourist.tripCounter == tripTime) {
                     if (tourist.isLeader) {
-                        cout << "Group: " << tourist.group << " ";
-                        // printQueue(tourist.tripQueue, tourist.pid);
-                        printQueue(tourist.groupMembers, tourist.pid);
+                        printQueue(tourist.tripQueue, tourist.pid);
+                        // printQueue(tourist.groupMembers, tourist.pid);
                         // printQueue(tourist.guideQueue, tourist.pid);
                     }
                     // printQueue(tourist.groupMembers, tourist.pid);
                     tourist.releaseGroup();
                 }
+                // sleep(1);
             }
         
         }
