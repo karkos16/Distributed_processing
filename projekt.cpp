@@ -255,7 +255,9 @@ int main(int argc, char **argv) {
         tourist.receivedReleaseGroup = groupSize; // groupSize zeby poczatkowy warunek byl spelniony
         tourist.hospitalCounter = 0;
         tourist.guideAcks = 1;
-
+        for (int i = 0; i < touristsNumber; i++) {
+            tourist.currentTimestamps[i] = 0;
+        }
         imitateTourist(tourist);
     }
     
