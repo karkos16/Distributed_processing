@@ -14,10 +14,8 @@ using namespace std;
 struct Tourist {
     int pid;
     int timestamp;
-    int group;
     bool inTripQueue;
     bool inGuideQueue;
-    bool inHospital;
     bool isBeaten;
     bool sendRequest;
     bool isLeader;
@@ -27,6 +25,9 @@ struct Tourist {
     int tripCounter;
     int receivedReleaseGroup;
     int hospitalCounter;
+    int leaderID;
+    bool waitingForReleaseGroup;
+    int removedCounter;
 
 
     std::priority_queue<Message> groupMembers;
@@ -87,7 +88,19 @@ struct Tourist {
 
         for (int to = 0; to < MAX_TOURISTS; ++to) {
             if (to != pid) {
-                sendMessage(to, type, timestamp, pid);
+                // sendMessage(to, type, timestamp, pid, groupMembersToVector());
+                sendPackedMessage(to, type, timestamp, pid, groupMembersToVector());
+            }
+        }
+    }
+
+    void broadcastMessage(int type, vector<int> groupMembers) {
+        timestamp++;
+
+        for (auto& to : groupMembers) {
+            if (to != pid) {
+                // sendMessage(to, type, timestamp, pid, groupMembersToVector());
+                sendPackedMessage(to, type, timestamp, pid, groupMembers);
             }
         }
     }
@@ -98,24 +111,56 @@ struct Tourist {
         while (!tempQueue.empty()) {
             Message msg = tempQueue.top();
             if (msg.touristId != pid) {
-                sendMessage(msg.touristId, type, timestamp, pid);
+                sendPackedMessage(msg.touristId, type, timestamp, pid, groupMembersToVector());
             }
             tempQueue.pop();
         }
     }
 
+    void reinitializeGroupMember() {
+        groupMembers = priority_queue<Message>();
+        for (int i = 0; i < groupSize; i++) {
+            groupMembers.push(Message({0, 0, 0, vector<int>({0,0,0,0,0,0,0})}));
+        }
+    }
+
+    vector<int> groupMembersToVector() {
+        priority_queue<Message> tempQueue = groupMembers;
+        vector<int> groupMembersVector;
+        while (!tempQueue.empty()) {
+            Message msg = tempQueue.top();
+            groupMembersVector.push_back(msg.touristId);
+            tempQueue.pop();
+        }
+        return groupMembersVector;
+    }
+
     void joinTripQueue(int numberOfTourists) {
         broadcastMessage(REQ_TRIP);
-        tripQueue.push({timestamp, pid, REQ_TRIP});
+        tripQueue.push({timestamp, pid, REQ_TRIP, groupMembersToVector()});
         sendRequest = true;
-        receivedReleaseGroup = 1;
+        receivedReleaseGroup = 0;
+        removedCounter = 0;
+        tripCounter = 0;
     }  
 
     void joinGuideQueue(int numberOfTourists) {
         broadcastMessage(REQ_GUIDE);
-        guideQueue.push({timestamp, pid, REQ_GUIDE});
+        guideQueue.push({timestamp, pid, REQ_GUIDE, groupMembersToVector()});
 
         sendRequest = true;
+    }
+
+    void removeTouristsFromQueue(vector<int> tourists) {
+        auto it = find(tourists.begin(), tourists.end(), pid);
+        if (it != tourists.end()) {
+            inTripQueue = false;
+            inTrip = false;
+        }
+        for (int i = 0; i < tourists.size(); i++) {
+            tripQueue = removeTouristFromQueue(tripQueue, tourists[i]);
+            // guideQueue = removeTouristFromQueue(guideQueue, tourists[i]); TUTAJ SIE ZASTANOWIC
+        }
     }
 
     priority_queue<Message> removeTouristFromQueue(priority_queue<Message> queue, int touristID) {
@@ -133,14 +178,17 @@ struct Tourist {
         return newQueue;
     }
 
-    void updateGroupNumber() {
-        group = findTouristIndexInTripQueue() / groupSize;
-    }
+    
 
     void releaseGroup() {
-        inTrip = false;
-        broadcastMessage(RELEASE_TRIP);
-        broadcastMessageInGroup(RELEASE_GROUP);
+        if (isLeader) {
+            waitingForReleaseGroup = true;
+            sendPackedMessage(pid, RELEASE_GROUP, timestamp, pid, groupMembersToVector());
+        } else {
+            inTrip = false;
+            waitingForReleaseGroup = true;
+            sendPackedMessage(leaderID, RELEASE_GROUP, timestamp, pid, groupMembersToVector());
+        }
     }
 
     int findTouristIndexInTripQueue() {
@@ -188,30 +236,27 @@ struct Tourist {
     void formGroup() {
         int groupNumber = findTouristIndexInTripQueue() / groupSize;
         priority_queue<Message> tempQueue = tripQueue;
+        priority_queue<Message> newGroupMembers;
         if (isLeader) {
             int index = findTouristIndexInTripQueue();
             while (!tempQueue.empty()) {
                 Message msg = tempQueue.top();
                 if ((index - findTouristIndexInTripQueue(msg.touristId)) < groupSize && (index - findTouristIndexInTripQueue(msg.touristId)) >= 0) {
-                    groupMembers.push(msg);
+                    newGroupMembers.push(msg);
                 }
                 tempQueue.pop();
             
             }
         }
+        groupMembers = newGroupMembers;
     }
 
-    void formGroup(int leaderID) {
-        int leaderIndex = findTouristIndexInTripQueue(leaderID);
-        priority_queue<Message> tempQueue = tripQueue;
-        while (!tempQueue.empty()) {
-                Message msg = tempQueue.top();
-                if ((leaderIndex - findTouristIndexInTripQueue(msg.touristId)) < groupSize && (leaderIndex - findTouristIndexInTripQueue(msg.touristId)) >= 0) {
-                    groupMembers.push(msg);
-                }
-                tempQueue.pop();
-            
-            }
+    void formGroup(vector<int> groupMembers) {
+        priority_queue<Message> tempQueue;
+        for (int i = 0; i < groupMembers.size(); i++) {
+            tempQueue.push({0, groupMembers[i], 0, groupMembers});
+        }
+        this->groupMembers = tempQueue;
     }
     
     void startTrip() {
@@ -222,7 +267,7 @@ struct Tourist {
         while (!tempQueue.empty()) {
             Message msg = tempQueue.top();
             if (msg.touristId != pid) {
-                sendMessage(msg.touristId, START_TRIP, timestamp, pid);
+                sendPackedMessage(msg.touristId, START_TRIP, timestamp, pid, groupMembersToVector());
             }
             tempQueue.pop();
         }
